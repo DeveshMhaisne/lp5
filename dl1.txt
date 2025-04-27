@@ -1,0 +1,72 @@
+import pandas as pd
+import tensorflow as tf
+from tensorflow.keras import layers, models
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+# Load dataset
+df = pd.read_csv('HousingData.csv')
+
+# Assuming the target column is 'MEDV' (median value of homes)
+X = df.drop('MEDV', axis=1)
+y = df['MEDV']
+# Split and scale
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+# Build model
+model = models.Sequential([
+    layers.Dense(64, activation='relu', input_shape=(X_train.shape[1],)),
+    layers.Dense(64, activation='relu'),
+    layers.Dense(1)
+])
+model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+model.fit(X_train, y_train, epochs=100, batch_size=16, verbose=0)
+loss, mae = model.evaluate(X_test, y_test, verbose=0)
+print(f"Test MAE: {mae:.2f}")
+model.summary()
+
+y_pred = model.predict(X_test).flatten()
+
+# Compare few predictions
+comparison_df = pd.DataFrame({'Actual': y_test.values[:10], 'Predicted': y_pred[:10]})
+print(comparison_df)
+
+from sklearn.metrics import r2_score,mean_squared_error,mean_absolute_error
+print("R² Score:", r2_score(y_test, y_pred))
+
+oss, mae = model.evaluate(X_test, y_test, verbose=0)
+print(f"Test MAE: {mae:.2f}")
+
+y_pred = model.predict(X_test).flatten()
+print("R² Score:", r2_score(y_test, y_pred))
+# Train Model
+history = model.fit(X_train, y_train, epochs=150, batch_size=16, validation_data=(X_test, y_test), verbose=1)
+import matplotlib.pyplot as plt
+
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Val Loss')
+plt.xlabel('Epoch')
+plt.ylabel('MSE Loss')
+plt.title('Loss Over Epochs')
+plt.legend()
+plt.show()
+mse=mean_squared_error(y_test,y_pred)
+print(f'Mean Squared Error (MSE): {mse}')
+
+# Take user input
+print("\nEnter the following details to predict house price:")
+
+input_data = []
+for column in X.columns:
+    value = float(input(f"{column}: "))
+    input_data.append(value)
+
+# Preprocess input
+input_data = scaler.transform([input_data])
+
+# Make prediction
+predicted_price = model.predict(input_data).flatten()[0]
+print(f"\nPredicted House Price (in $1000s): {predicted_price:.2f}")
+
